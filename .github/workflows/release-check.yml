@@ -1,0 +1,36 @@
+name: Rebuild on a new release
+
+# The page lists the latest mvx release, baked in at build time.  Compare what
+# the live site serves at /releases.json with GitHub, and rebuild when they
+# differ.  A token-triggered workflow_dispatch is allowed to start another
+# workflow, so no personal token is needed.
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: lts/*
+
+      - id: cmp
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SITE: https://mvx-lang.org/releases.json
+        run: node scripts/release-changed.mjs >> "$GITHUB_OUTPUT"
+
+      - if: steps.cmp.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run deploy.yml --repo "${{ github.repository }}" --ref main

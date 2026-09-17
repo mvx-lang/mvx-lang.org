@@ -1,0 +1,66 @@
+---
+import data from '../data/releases.json';
+
+const mvx = data.packages.find((p) => p.id === 'mvx')!;
+const { stable, preview } = mvx;
+
+const fmt = (d: string) =>
+  d ? new Date(`${d}T00:00:00Z`).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+const mb = (n: number) => `${(n / 1048576).toFixed(0)} MB`;
+const arch = (name: string) => (/arm64|aarch64/.test(name) ? 'Linux ARM64' : /amd64|x86_64/.test(name) ? 'Linux x86-64' : name);
+const checked = new Date(data.generated).toLocaleDateString('en-AU', {
+  day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Melbourne',
+});
+---
+<div class="rel">
+  {stable ? (
+    <div class="card">
+      <div class="head">
+        <p class="ver"><a href={stable.url}>mvx {stable.version}</a></p>
+        <p class="date">Released {fmt(stable.date)}</p>
+      </div>
+      <ul class="dl">
+        {stable.assets.map((a) => (
+          <li>
+            <a class="btn btn-plain" href={a.url}>Download for {arch(a.name)}</a>
+            <span class="size">{a.name}, {mb(a.size)}</span>
+          </li>
+        ))}
+      </ul>
+      <p class="links">
+        <a href={stable.url}>Release notes</a>
+        <a href={mvx.url}>All releases</a>
+      </p>
+    </div>
+  ) : (
+    <p>No release has been published yet. <a href={mvx.url}>Check GitHub for builds</a>.</p>
+  )}
+  {preview && (
+    <p class="preview">
+      A preview, <a href={preview.url}>mvx {preview.version}</a>, is also available ({fmt(preview.date)}).
+    </p>
+  )}
+  <p class="checked">Checked against GitHub on {checked}. This page is rebuilt when a new release is published.</p>
+</div>
+
+<style>
+  .card {
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    background: var(--code-bg);
+    padding: 1.25rem 1.4rem;
+    display: grid;
+    gap: 1.1rem;
+  }
+  .head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1rem; }
+  .ver { font: 700 1.6rem/1.1 var(--display); letter-spacing: -0.02em; }
+  .ver a { color: var(--ink); text-decoration: none; }
+  .ver a:hover { text-decoration: underline; }
+  .date { color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .dl { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; }
+  .dl li { display: grid; gap: 0.35rem; }
+  .size { color: var(--ink-2); font: 0.8rem/1.3 var(--mono); }
+  .links { display: flex; flex-wrap: wrap; gap: 0.25rem 1.25rem; font-size: 0.95rem; }
+  .preview { margin-top: 0.9rem; }
+  .checked { margin-top: 0.75rem; color: var(--ink-2); font-size: 0.88rem; }
+</style>

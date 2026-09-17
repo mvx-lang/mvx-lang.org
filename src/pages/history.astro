@@ -1,0 +1,192 @@
+---
+import Base from '../layouts/Base.astro';
+import { ARTICLE, REPO } from '../data/links';
+
+const timeline = [
+  { when: 'Before 2026', what: 'A Pick BASIC compiler on LLVM, built as a side project over a couple of years.' },
+  { when: 'July 2026', what: 'mvx goes public. Version 0.1.0 ships with the compiler, the TCL shell, dictionaries, queries and pluggable storage.' },
+  { when: 'August 2026', what: 'MVPKG and its package registry arrive.' },
+  { when: 'September 2026', what: 'mvx gets its own home at mvx-lang.org, and packages move to packages.mvx-lang.org.' },
+];
+
+const sieve = [
+  { name: 'mvx, after the fix', flat: '13,660', banked: 76 },
+  { name: 'UniVerse 14.2', flat: 'cannot run', banked: 35 },
+  { name: 'UniData 8.3', flat: '66', banked: 35 },
+  { name: 'mvx, before the fix', flat: '13,660', banked: 31 },
+  { name: 'jBASE 6.2.1', flat: '145', banked: 7 },
+];
+---
+<Base
+  title="History of mvx"
+  description="How mvx came about: a Pick BASIC compiler on LLVM, the storage drivers that grew around it, and git for MultiValue accounts."
+>
+  <article class="wrap">
+    <header class="head">
+      <h1>Where mvx came from</h1>
+      <p class="lede">
+        mvx began as a compiler. Everything else here, from the shell to the storage drivers, started
+        as something for that compiler to compile.
+      </p>
+      <p class="by">
+        By Gordon Heydon. Adapted from <a href={ARTICLE}>Git in the PICK world</a>, August 2026.
+      </p>
+    </header>
+
+    <ol class="timeline" aria-label="Timeline">
+      {timeline.map((t) => (
+        <li><span class="when">{t.when}</span><span class="what">{t.what}</span></li>
+      ))}
+    </ol>
+
+    <div class="prose">
+      <h2>Why a compiler</h2>
+      <p>
+        When Apple put LLVM at the centre of its developer tools, I thought: that is how you would
+        build Pick BASIC properly. A real compiler, producing real executables. I had always liked the
+        language and had never seen it compiled the way everything else is.
+      </p>
+      <p>
+        Earlier attempts usually translated BASIC to C and compiled that. It works, but you lose the
+        debugger and pay in build times. mvx goes straight from BASIC to LLVM and on to machine code,
+        and it writes standard DWARF debug information against your BASIC line numbers.
+      </p>
+      <p>
+        That turned out to matter more than speed. To gdb, lldb, perf, Instruments or valgrind, a
+        compiled BASIC program is just another program. A stock profiler, told nothing but a process
+        id, names the line of Pick BASIC where the time is going. The compiler can also write out its
+        LLVM IR with your variable names intact. That gives future analysis and security tools a
+        starting point that MultiValue has never had.
+      </p>
+
+      <h2 id="speed">Proving it was fast</h2>
+      <p>
+        I wanted a benchmark nobody could say I had picked to suit myself, so I used Dave Plummer's
+        prime sieve from the <a href="https://github.com/PlummersSoftwareLLC/Primes">Primes project</a>,
+        where the same program is measured in every language on the same terms. The Pick BASIC version
+        is <a href={`${REPO}/blob/main/bench/sieve.b`}>bench/sieve.b</a>.
+      </p>
+      <p>
+        Sieving to one million for five seconds, mvx managed 13,660 passes against 14,221 for C on the
+        same machine: about 96% of C, from Pick BASIC. Each system was measured against a C baseline on
+        its own hardware. UniData 8.3 managed 66 passes against C's 13,967. jBASE 6.2.1, which compiles
+        through C, managed 145, or 216 with its optimiser turned up.
+      </p>
+      <p>
+        jBASE settled the question for me. Compiling alone is not the difference; how values are held
+        is. If every variable stays a string that must be checked and converted before each sum, the C
+        compiler underneath cannot see past it. The gain comes from the front end proving a variable is
+        numeric and emitting a native integer or double.
+      </p>
+      <p>
+        UniVerse could not run the sieve at all, because it limits an array to 64,000 elements. So I
+        wrote <a href={`${REPO}/blob/main/bench/sieve-banked.b`}>a banked version</a> that stores the
+        flags in dynamic arrays, which every MultiValue system can express. That version exposed a real
+        weakness in mvx.
+      </p>
+
+      <figure class="sieve">
+        <figcaption>Banked sieve, passes in five seconds</figcaption>
+        <div class="tbl" role="region" aria-label="Banked sieve results" tabindex="0">
+          <table>
+            <thead><tr><th scope="col">System</th><th scope="col" class="num">Banked sieve</th><th scope="col" class="num">Flat sieve</th></tr></thead>
+            <tbody>
+              {sieve.map((r) => (
+                <tr>
+                  <th scope="row">{r.name}</th>
+                  <td class="num"><span class="cell"><span class="bar" aria-hidden="true"><span style={`--w:${(r.banked / 76) * 100}%`}></span></span><span>{r.banked}</span></span></td>
+                  <td class="num dim">{r.flat}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </figure>
+
+      <p>
+        Before the fix, the fastest system on the flat sieve came third of four. Banking cost UniData a factor of two
+        and mvx a factor of 440, because every dynamic-array operation allocated memory, and replacing
+        one element copied the whole string twice. The profiler put 45% of the time in the memory
+        allocator.
+      </p>
+      <p>
+        Three changes fixed it. A value reuses its own buffer when nothing else shares it. An element
+        assignment patches the string in place. Long arrays get an index built on demand, so reaching
+        element N no longer means scanning from the start. Writing an element went from 170 to 64
+        nanoseconds, and on long arrays the cost stopped growing with length. mvx now manages 76 passes
+        on the banked sieve, ahead of both interpreters, and the flat result did not change.
+      </p>
+
+      <h2>Drivers instead of a database</h2>
+      <p>
+        I never set out to write a database. Durability, replication, backup and monitoring are problems
+        PostgreSQL and its neighbours have spent decades solving. So mvx has storage drivers instead: a
+        file is bound to SQLite, LMDB, PostgreSQL, MongoDB or MySQL, and one account can mix them.
+      </p>
+      <p>
+        The mapping layer builds real tables from your dictionaries. MultiValue programs read and write
+        records, while anything that speaks SQL reads the same live data as rows. And because a session
+        is a process and a file can live on another machine, the system spreads across as many
+        containers as you give it, instead of needing one bigger server.
+      </p>
+
+      <p class="read-on">
+        The full story is in <a href={ARTICLE}>Git in the PICK world</a> on heydon.consulting.
+      </p>
+    </div>
+  </article>
+</Base>
+
+<style>
+  article { padding-block: clamp(3rem, 8vw, 6rem) 0; }
+  .head { max-width: 46rem; }
+  .lede { margin-top: 1.25rem; font-size: clamp(1.15rem, 1.8vw, 1.35rem); line-height: 1.5; color: var(--ink-2); }
+  .by { margin-top: 1rem; font-size: 0.95rem; color: var(--ink-2); }
+
+  .timeline {
+    list-style: none;
+    margin: 3rem 0 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
+    row-gap: 1.5rem;
+  }
+  .timeline li { padding: 0.9rem 1.25rem 0 0; position: relative; border-top: 2px solid var(--ink); }
+  .timeline li::before {
+    content: '';
+    position: absolute;
+    top: -7px;
+    left: 0;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--paper);
+    border: 2px solid var(--accent);
+  }
+  .when { display: block; font: 600 1rem/1.3 var(--display); margin-bottom: 0.3rem; }
+  .what { display: block; color: var(--ink-2); font-size: 0.93rem; line-height: 1.5; }
+
+  .prose { max-width: 42rem; margin-top: 3.5rem; }
+  .prose h2 { font-size: clamp(1.5rem, 2.8vw, 2rem); margin: 3rem 0 1rem; scroll-margin-top: 0.5rem; }
+  .prose p { font-size: 1.075rem; }
+
+  .sieve { margin: 2rem 0; }
+  .sieve figcaption { font-size: 0.9rem; color: var(--ink-2); margin-bottom: 0.5rem; }
+  .tbl { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--code-bg); }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { padding: 0.6rem 0.9rem; text-align: left; white-space: nowrap; }
+  thead th { font-size: 0.85rem; color: var(--ink-2); border-bottom: 1px solid var(--rule); }
+  tbody th { font-weight: 600; }
+  tbody tr + tr > * { border-top: 1px solid var(--rule); }
+  .num { text-align: right; font-family: var(--mono); }
+  td.num { min-width: 8rem; width: 45%; }
+  thead th.num { font-family: var(--body); }
+  .cell { display: flex; align-items: center; gap: 0.75rem; }
+  .cell > span:last-child { min-width: 2ch; }
+  .bar { flex: 1; height: 0.6rem; background: var(--paper-2); border-radius: 2px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; width: var(--w); background: var(--ink-2); }
+  tbody tr:first-child .bar > span { background: var(--accent); }
+  .dim { color: var(--ink-2); }
+
+  .read-on { margin-top: 3rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); color: var(--ink-2); }
+</style>

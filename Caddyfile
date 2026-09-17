@@ -1,0 +1,41 @@
+:80 {
+	root * /srv
+	encode zstd gzip
+
+	# www is an alias; the site lives on the bare domain.
+	@www host www.mvx-lang.org
+	redir @www https://mvx-lang.org{uri} permanent
+
+	# Astro builds directory-style routes (/history/index.html), which
+	# file_server serves as directory indexes.  A missing page gets the site's
+	# own 404 page, with a real 404 status.
+	file_server
+	handle_errors 404 {
+		rewrite * /404.html
+		file_server {
+			status 404
+		}
+	}
+
+	# Fingerprinted assets never change; pages and the release list do.
+	@assets path /_astro/*
+	header @assets Cache-Control "public, max-age=31536000, immutable"
+
+	@html path *.html / /history/
+	header @html Cache-Control "public, max-age=300, must-revalidate"
+
+	@releases path /releases.json
+	header @releases Cache-Control "public, max-age=60"
+
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	log {
+		output stderr
+		format console
+		level INFO
+	}
+}

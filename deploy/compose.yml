@@ -1,0 +1,28 @@
+# Installed as /home/gordon/docker/mvx-lang-web/docker-compose.yml on the
+# hosting VM (192.168.15.35) by the deploy workflow, which then pulls the
+# image and runs `docker compose up -d` here.  Traefik on 192.168.15.2 routes
+# mvx-lang.org and www.mvx-lang.org to port 8087.
+
+services:
+  web:
+    image: ghcr.io/mvx-lang/mvx-lang.org:latest
+    container_name: mvx-lang-web
+    restart: unless-stopped
+    pull_policy: always
+    networks:
+      - proxy
+    ports:
+      - "8087:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    labels:
+      # Watchtower runs on this host; the deploy workflow owns this container.
+      - "com.centurylinklabs.watchtower.enable=false"
+
+networks:
+  proxy:
+    external: true

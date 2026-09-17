@@ -1,0 +1,20 @@
+{
+  "name": "mvx-lang-org",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "prebuild": "node scripts/fetch-releases.mjs",
+    "build": "astro build",
+    "preview": "astro preview",
+    "releases": "node scripts/fetch-releases.mjs"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.2.1",
+    "@fontsource-variable/bricolage-grotesque": "^5.1.0",
+    "@fontsource/ibm-plex-mono": "^5.1.0",
+    "@fontsource/ibm-plex-sans": "^5.1.0",
+    "astro": "^5.18.0"
+  }
+}

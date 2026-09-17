@@ -1,0 +1,184 @@
+---
+import '@fontsource-variable/bricolage-grotesque/wght.css';
+import '@fontsource/ibm-plex-sans/400.css';
+import '@fontsource/ibm-plex-sans/400-italic.css';
+import '@fontsource/ibm-plex-sans/600.css';
+import '@fontsource/ibm-plex-mono/400.css';
+import '@fontsource/ibm-plex-mono/600.css';
+import '../styles/global.css';
+import { GITHUB, REPO, WIKI, ISSUES, PACKAGES, EMAIL } from '../data/links';
+
+interface Props {
+  title: string;
+  description: string;
+}
+const { title, description } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+const nav = [
+  { href: '/history/', label: 'History' },
+  { href: '/#releases', label: 'Download' },
+  { href: WIKI, label: 'Docs' },
+  { href: REPO, label: 'GitHub' },
+];
+---
+<!doctype html>
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta name="theme-color" content="#f7f9f8" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f1817" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+  </head>
+  <body id="top">
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-head">
+      <div class="wrap bar">
+        <a class="wordmark" href="/" aria-label="mvx home">mvx<span class="mark" aria-hidden="true">þ</span></a>
+        <nav aria-label="Site">
+          <ul>
+            {nav.map((n) => (
+              <li><a href={n.href} aria-current={path === n.href.replace(/\/$/, '') ? 'page' : undefined}>{n.label}</a></li>
+            ))}
+          </ul>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <slot />
+    </main>
+
+    <a class="to-top" href="#top" aria-label="Back to top" data-hidden>
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+
+    <footer class="site-foot">
+      <div class="wrap foot">
+        <p>
+          mvx is free software under the
+          <a href={`${REPO}/blob/main/LICENSE`}>GNU General Public License, version 2</a>.
+          Built by Gordon Heydon in Melbourne.
+        </p>
+        <ul>
+          <li><a href={GITHUB}>GitHub</a></li>
+          <li><a href={WIKI}>Documentation</a></li>
+          <li><a href={PACKAGES}>Packages</a></li>
+          <li><a href={ISSUES}>Report an issue</a></li>
+          <li><a href={`mailto:${EMAIL}`}>{EMAIL}</a></li>
+        </ul>
+      </div>
+    </footer>
+    <script>
+      const btn = document.querySelector<HTMLAnchorElement>('.to-top');
+      if (btn) {
+        const update = () => {
+          const off = window.scrollY < 600;
+          btn.toggleAttribute('data-hidden', off);
+          btn.tabIndex = off ? -1 : 0;
+          btn.setAttribute('aria-hidden', String(off));
+        };
+        update();
+        window.addEventListener('scroll', update, { passive: true });
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          window.scrollTo({ top: 0, behavior: still ? 'auto' : 'smooth' });
+          document.querySelector<HTMLElement>('.wordmark')?.focus({ preventScroll: true });
+        });
+      }
+    </script>
+  </body>
+</html>
+
+<style>
+  .site-head {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    border-bottom: 1px solid var(--rule);
+    background: color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-block: 0.9rem;
+  }
+  .wordmark {
+    font: 700 1.6rem/1 var(--display);
+    letter-spacing: -0.04em;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .wordmark .mark { font-family: var(--mono); font-size: 0.8em; margin-left: 0.05em; }
+  nav ul {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.25rem;
+    margin: 0;
+    padding: 0;
+  }
+  nav a {
+    color: var(--ink-2);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.975rem;
+  }
+  nav a:hover, nav a[aria-current='page'] { color: var(--ink); text-decoration: underline; }
+
+  .to-top {
+    position: fixed;
+    right: max(1rem, env(safe-area-inset-right));
+    bottom: max(1rem, env(safe-area-inset-bottom));
+    z-index: 20;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-ink);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--ink) 25%, transparent);
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+  .to-top:hover { filter: brightness(1.08); }
+  .to-top[data-hidden] { opacity: 0; transform: translateY(0.5rem); pointer-events: none; }
+
+  .site-foot {
+    margin-top: 6rem;
+    border-top: 1px solid var(--rule);
+    background: var(--paper-2);
+    color: var(--ink-2);
+    font-size: 0.95rem;
+  }
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1.25rem 3rem;
+    padding-block: 2.25rem;
+  }
+  .foot ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem 1.25rem;
+  }
+</style>

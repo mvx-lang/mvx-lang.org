@@ -1,0 +1,343 @@
+---
+import Base from '../layouts/Base.astro';
+import RecordDemo from '../components/RecordDemo.astro';
+import Releases from '../components/Releases.astro';
+import releases from '../data/releases.json';
+import { REPO, WIKI, ISSUES, EMAIL, PACKAGES, wiki } from '../data/links';
+
+const mvx = releases.packages.find((p) => p.id === 'mvx');
+const latest = mvx?.stable;
+const download = latest ? latest.url : `${REPO}/releases/latest`;
+
+// The flat 1M prime sieve over five seconds, as a share of a C sieve run on
+// the same machine.  Figures from "Git in the PICK world" (Aug 2026).
+const bench = [
+  { name: 'mvx', passes: 13660, c: 14221, note: 'LLVM, native code' },
+  { name: 'jBASE 6.2.1 with -O4', passes: 216, c: 13708, note: 'compiled through C' },
+  { name: 'jBASE 6.2.1', passes: 145, c: 13708, note: 'compiled through C' },
+  { name: 'UniData 8.3', passes: 66, c: 13967, note: 'interpreted' },
+].map((b) => ({ ...b, pct: (b.passes / b.c) * 100 }));
+
+const drivers = [
+  { name: 'SQLite', text: 'The default for a new account. One file, nothing to run.' },
+  { name: 'PostgreSQL', text: 'Records as jsonb, typed columns from your dictionaries, native indexes, and record locks shared across processes.' },
+  { name: 'MongoDB', text: 'A document per record, mapped fields beside it, and associations as embedded arrays.' },
+  { name: 'MySQL and MariaDB', text: 'The same document shape, on the database many shops already run.' },
+  { name: 'LMDB', text: 'Embedded and very fast, for a single host.' },
+  { name: 'mvx-lmdbd', text: 'LMDB behind a network daemon, so many hosts share one set of files.' },
+  { name: 'Directory files', text: 'Each record is a plain OS file, so source code sits where git and your editor can see it.' },
+];
+
+const docs = [
+  { slug: 'getting-started', title: 'Getting started', text: 'Build, install and open your first account.' },
+  { slug: 'language', title: 'The language', text: 'MVX BASIC, statements and intrinsic functions.' },
+  { slug: 'tcl', title: 'TCL', text: 'The command shell and its verbs.' },
+  { slug: 'files', title: 'Files and dictionaries', text: 'Records, dictionaries, queries, indexes, and mapping to SQL and JSON.' },
+  { slug: 'deployment', title: 'Deployment', text: 'Storage drivers, named connections, PostgreSQL and MongoDB.' },
+  { slug: 'containers', title: 'Containers', text: 'The published images and how to run them.' },
+  { slug: 'packages', title: 'Packages', text: 'Installing and publishing with MVPKG.' },
+  { slug: 'git', title: 'Version control', text: 'Hash-file records under git.' },
+];
+---
+<Base
+  title="mvx: Pick BASIC, compiled"
+  description="mvx is an open-source MultiValue system: Pick BASIC compiled to native code with LLVM, built to run in containers, with your data on PostgreSQL, MongoDB, SQLite or LMDB."
+>
+  <section class="hero wrap">
+    <h1>Pick BASIC,<br />compiled to native&nbsp;code.</h1>
+    <p class="lede">
+      mvx is a MultiValue system built with today's tools. An LLVM compiler turns your BASIC into real
+      machine code with a real debugger. It ships as containers, and it keeps your data in PostgreSQL,
+      MongoDB or a local store, whichever your team already runs.
+    </p>
+    <div class="actions">
+      <a class="btn btn-primary" href={download}>Download mvx {latest?.version}</a>
+      <a class="btn btn-plain" href={WIKI}>Read the documentation</a>
+      <a class="btn btn-plain" href={REPO}>View the source</a>
+    </div>
+    <div class="try">
+      <p>Or try it now, with nothing to install but Docker:</p>
+      <pre><code>docker run --rm -it ghcr.io/mvx-lang/mvx-demo</code></pre>
+    </div>
+  </section>
+
+  <section class="band" aria-labelledby="data-h">
+    <div class="wrap">
+      <div class="intro">
+        <h2 id="data-h">Your records, in the database you already run.</h2>
+        <p>
+          Every file in an account is bound to a storage driver, and one account can mix them. The
+          dictionary you already have becomes the schema. Programs keep reading and writing records,
+          while reporting tools read the same live data as rows or documents. There is no export and
+          no nightly copy.
+        </p>
+      </div>
+      <RecordDemo />
+    </div>
+  </section>
+
+  <section class="wrap split" aria-labelledby="store-h">
+    <div class="intro">
+      <h2 id="store-h">Three commands to put a file on PostgreSQL.</h2>
+      <p>
+        Define a connection once and bind files to it by name. The host and password live outside
+        the account, so the account can go under version control and a container can supply its
+        target through environment variables.
+      </p>
+      <p>
+        <code>CREATE-MAP</code> names the fields you want as columns. From then on every
+        <code>WRITE</code> keeps them up to date, changing only what moved.
+      </p>
+    </div>
+    <div class="stack">
+      <figure>
+        <figcaption>At the mvx prompt</figcaption>
+        <pre><code>&gt; SET-CONNECTION pgmain driver=postgres address=db:5432 dbname=mvx user=app namespace=sales
+&gt; CREATE-FILE ORDERS USING @pgmain
+&gt; CREATE-MAP ORDERS CUSTOMER PRODUCT QTY PRICE</code></pre>
+      </figure>
+      <figure>
+        <figcaption>In psql, before any mapping: attributes by number</figcaption>
+        <pre><code>SELECT id, doc-&gt;&gt;'1' AS customer, doc-&gt;'2' AS products
+  FROM sales."ORDERS";
+
+ id     | customer  | products
+--------+-----------+----------------------
+ \x3130303432 | Acme Corp | ["Widget", "Gadget"]</code></pre>
+      </figure>
+      <figure>
+        <figcaption>In psql, after mapping: names from the dictionary</figcaption>
+        <pre><code>SELECT o."CUSTOMER", sum(i."QTY"::numeric * i."PRICE") AS total
+  FROM sales."ORDERS" o
+  JOIN sales."ORDERS_ORDERITEMS" i USING (id)
+ GROUP BY o."CUSTOMER";
+
+ CUSTOMER  | total
+-----------+-------
+ Acme Corp | 24.48</code></pre>
+      </figure>
+      <figure>
+        <figcaption>In mongosh, the same file bound to MongoDB</figcaption>
+        <pre><code>use sales
+db.ORDERS.aggregate([
+  {'{'} $unwind: '$ORDERITEMS' {'}'},
+  {'{'} $group: {'{'}
+      _id: '$CUSTOMER',
+      total: {'{'} $sum: {'{'} $multiply: [
+        {'{'} $toInt: '$ORDERITEMS.QTY' {'}'}, '$ORDERITEMS.PRICE' ] {'}'} {'}'}
+  {'}'} {'}'}
+])
+
+[ {'{'} _id: 'Acme Corp', total: 24.48 {'}'} ]</code></pre>
+      </figure>
+    </div>
+  </section>
+
+  <section class="wrap" aria-labelledby="drv-h">
+    <h2 id="drv-h">Pick a backend per file.</h2>
+    <dl class="drivers">
+      {drivers.map((d) => (
+        <div>
+          <dt>{d.name}</dt>
+          <dd>{d.text}</dd>
+        </div>
+      ))}
+    </dl>
+    <p class="more">
+      Queries are pushed down to the database where it can answer them, so a <code>LIST</code> with a
+      <code>WITH</code> clause returns only the matching records rather than the whole table.
+      <a href={wiki('deployment')}>How the drivers work</a>.
+    </p>
+  </section>
+
+  <section class="wrap split" aria-labelledby="native-h">
+    <div class="intro">
+      <h2 id="native-h">Compiled, not interpreted.</h2>
+      <p>
+        mvx compiles BASIC straight to machine code through LLVM, the compiler toolkit behind clang
+        and Swift. It does not translate to C first. Numeric variables become real integers and
+        doubles, so arithmetic runs at the speed of C.
+      </p>
+      <p>
+        The compiler also writes standard debug information mapped to your BASIC line numbers. gdb
+        and lldb step through the program you wrote, and profilers such as perf and Instruments
+        report time against your own source lines.
+      </p>
+    </div>
+    <figure class="bench">
+      <figcaption>
+        A prime sieve written in Pick BASIC, run for five seconds, as a share of a C version on the
+        same machine.
+      </figcaption>
+      <ul>
+        {bench.map((b) => (
+          <li>
+            <span class="b-name">{b.name} <span class="b-note">{b.note}</span></span>
+            <span class="b-bar" aria-hidden="true"><span style={`--w:${Math.max(b.pct, 0.6).toFixed(2)}%`}></span></span>
+            <span class="b-val">{b.pct < 10 ? b.pct.toFixed(1) : Math.round(b.pct)}% of C</span>
+          </li>
+        ))}
+      </ul>
+      <p class="b-src">
+        Each system is measured against C on its own machine. <a href="/history/#speed">How these were measured</a>.
+      </p>
+    </figure>
+  </section>
+
+  <section class="band" aria-labelledby="ctr-h">
+    <div class="wrap split">
+      <div class="intro">
+        <h2 id="ctr-h">Made to run in containers.</h2>
+        <p>
+          A session is an ordinary process, and a file can live on another machine. So an account can
+          keep its programs local while its data sits on a shared database, and you add capacity by
+          adding containers instead of buying a bigger server.
+        </p>
+      </div>
+      <ul class="facts">
+        <li>
+          <strong>Published images</strong> for <code>linux/amd64</code> and <code>linux/arm64</code>:
+          <code>ghcr.io/mvx-lang/mvx</code>, <code>mvx-lmdbd</code> and <code>mvx-demo</code>.
+        </li>
+        <li>
+          <strong>Relocatable tarballs</strong> that find their own runtime and drivers. No environment
+          variables to set.
+        </li>
+        <li>
+          <strong>Connections from the environment.</strong> Set <code>MVXCONN_SALESDB_ADDRESS</code>
+          and the account follows, with no file to edit.
+        </li>
+        <li>
+          <strong>Operations you already know.</strong> Backups, replication and monitoring are handled
+          by PostgreSQL or MongoDB, with the tools your team uses today.
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="wrap" aria-labelledby="sys-h">
+    <h2 id="sys-h">A complete MultiValue system.</h2>
+    <dl class="system">
+      <div><dt>TCL shell</dt><dd>The classic command line, with its verbs written in BASIC and cataloged like any program.</dd></div>
+      <div><dt>Dictionaries and queries</dt><dd><code>LIST</code>, <code>SELECT</code> and <code>SORT</code> driven by your dictionaries, with conversions, formats and select lists.</dd></div>
+      <div><dt>Secondary indexes</dt><dd>Built on the backend itself where it has them.</dd></div>
+      <div><dt>Packages</dt><dd><code>MVPKG</code> installs libraries from <a href={PACKAGES}>packages.mvx-lang.org</a>, with dependencies resolved for you.</dd></div>
+      <div><dt>Version control</dt><dd>Records, dictionaries and VOC under git, from the <code>GIT</code> verb or the shell.</dd></div>
+      <div><dt>Permissions in the runtime</dt><dd>Restricted, developer and unrestricted sessions, enforced where a program cannot get around them.</dd></div>
+    </dl>
+  </section>
+
+  <section class="wrap" id="releases" aria-labelledby="rel-h">
+    <h2 id="rel-h">Latest release</h2>
+    <p class="sub">
+      Relocatable builds for Linux. Installing mvx also installs MVPKG and git, and asks which
+      version of each you want. Other packages are on <a href={PACKAGES}>packages.mvx-lang.org</a>.
+    </p>
+    <Releases />
+    <pre class="install"><code>tar xzf mvx-lang-{latest?.version}-linux-amd64.tar.gz     # or -arm64
+./mvx-lang/bin/mvx -a myaccount</code></pre>
+  </section>
+
+  <section class="wrap" aria-labelledby="doc-h">
+    <h2 id="doc-h">Documentation</h2>
+    <ul class="docs">
+      {docs.map((d) => (
+        <li>
+          <a href={wiki(d.slug)}>{d.title}</a>
+          <span>{d.text}</span>
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="wrap port" aria-labelledby="port-h">
+    <h2 id="port-h">Have a Pick application?</h2>
+    <p>
+      mvx gets better by running real software. If you have a UniVerse, UniData, jBASE, D3 or Reality
+      application, or a framework such as SB+ or CueBic, that you would let me test against, I would
+      like to hear from you. I'm happy to sign an NDA.
+    </p>
+    <div class="actions">
+      <a class="btn btn-primary" href={`mailto:${EMAIL}?subject=Porting%20to%20mvx`}>Email {EMAIL}</a>
+      <a class="btn btn-plain" href={ISSUES}>Open an issue</a>
+    </div>
+  </section>
+</Base>
+
+<style>
+  section { padding-block: clamp(3rem, 7vw, 5.5rem); }
+  h2 { margin-bottom: 1rem; }
+  .intro p { color: var(--ink); }
+  .intro { margin-bottom: 2rem; }
+
+  .hero { padding-block: clamp(3.5rem, 9vw, 7rem) clamp(2.5rem, 5vw, 4rem); }
+  .hero h1 { max-width: 14ch; }
+  .lede { margin-top: 1.5rem; font-size: clamp(1.1rem, 1.6vw, 1.3rem); line-height: 1.55; max-width: 58ch; color: var(--ink-2); }
+  .actions { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 2rem; }
+  .try { margin-top: 2.25rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+  .try p { color: var(--ink-2); font-size: 0.95rem; }
+  .try pre { padding: 0.55rem 0.85rem; max-width: 100%; }
+
+  .band { background: var(--band); border-block: 1px solid var(--rule); }
+
+  .split { display: grid; gap: 2rem 4rem; align-items: start; }
+  @media (min-width: 60rem) {
+    .split { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); }
+    .split .intro { position: sticky; top: 5.5rem; margin-bottom: 0; }
+  }
+
+  .stack { display: grid; gap: 1.5rem; min-width: 0; }
+  .stack figure, .bench { margin: 0; min-width: 0; }
+  .stack figcaption { font-size: 0.9rem; color: var(--ink-2); margin-bottom: 0.4rem; }
+
+  .drivers, .system {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+    gap: 0;
+    margin: 1.5rem 0 0;
+    border-top: 1px solid var(--rule);
+  }
+  .drivers > div, .system > div { padding: 1rem 1.5rem 1.1rem 0; border-bottom: 1px solid var(--rule); }
+  dt { font: 600 1.05rem/1.3 var(--display); }
+  dd { margin: 0.3rem 0 0; color: var(--ink-2); font-size: 0.97rem; }
+  .more { margin-top: 1.5rem; }
+
+  .bench figcaption { font-size: 0.95rem; color: var(--ink-2); margin-bottom: 1rem; max-width: 50ch; }
+  .bench ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+  .bench li {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas: 'name val' 'bar bar';
+    gap: 0.35rem 1rem;
+    align-items: baseline;
+  }
+  .b-name { grid-area: name; font-weight: 600; }
+  .b-note { font-weight: 400; color: var(--ink-2); font-size: 0.9rem; margin-left: 0.35rem; }
+  .b-val { grid-area: val; font: 600 0.95rem/1 var(--mono); font-variant-numeric: tabular-nums; }
+  .b-bar { grid-area: bar; height: 0.9rem; background: var(--paper-2); border: 1px solid var(--rule); border-radius: 3px; overflow: hidden; }
+  .b-bar > span { display: block; height: 100%; width: var(--w); background: var(--ink-2); }
+  .bench li:first-child .b-bar > span { background: var(--accent); }
+  .b-src { margin-top: 1rem; font-size: 0.88rem; color: var(--ink-2); }
+
+  .facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 1.25rem; }
+  .facts li { padding-left: 1.1rem; border-left: 3px solid var(--accent); }
+  .facts strong { display: block; font-family: var(--display); font-size: 1.1rem; margin-bottom: 0.15rem; }
+
+  .sub { color: var(--ink-2); margin-bottom: 1.5rem; }
+  .install { margin-top: 1.5rem; }
+
+  .docs {
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: 0.25rem 2.5rem;
+  }
+  .docs li { padding-block: 0.75rem; border-bottom: 1px solid var(--rule); }
+  .docs a { font: 600 1.1rem/1.3 var(--display); display: block; }
+  .docs span { color: var(--ink-2); font-size: 0.95rem; }
+
+  .port { padding-bottom: 0; }
+  .port p { font-size: 1.1rem; }
+</style>

@@ -1,0 +1,99 @@
+name: Build and deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-
+
+      # The hosting VM is x86-64, so that is the only platform built.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          secrets: |
+            github_token=${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: build
+    runs-on: [self-hosted, mvx-lang-deploy]
+    permissions:
+      contents: read
+      packages: read
+    env:
+      DIR: /home/gordon/docker/mvx-lang-web
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install the compose file
+        run: |
+          set -euo pipefail
+          mkdir -p "$DIR"
+          install -m 0644 deploy/compose.yml "$DIR/docker-compose.yml"
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Pull and restart
+        working-directory: ${{ env.DIR }}
+        run: |
+          set -euo pipefail
+          docker compose pull
+          docker compose up -d --remove-orphans
+          docker compose ps
+
+      - name: Check the site answers
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 15); do
+            if wget -q -O /dev/null http://127.0.0.1:8087/; then
+              wget -q -O - http://127.0.0.1:8087/releases.json | head -c 300; echo
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "the site did not answer on :8087" >&2
+          exit 1
+
+      - name: Prune old images
+        run: |
+          docker image prune -f \
+            --filter "label=org.opencontainers.image.source=https://github.com/${{ github.repository }}" || true
+
+      - name: Log out of GHCR
+        if: always()
+        run: docker logout ghcr.io || true

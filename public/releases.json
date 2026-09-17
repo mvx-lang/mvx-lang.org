@@ -1,0 +1,31 @@
+{
+  "generated": "2026-09-17T08:46:59.581Z",
+  "packages": [
+    {
+      "id": "mvx",
+      "name": "mvx",
+      "repo": "mvx-lang/mvx",
+      "summary": "The compiler, runtime and shell, for Linux on x86-64 and ARM64.",
+      "url": "https://github.com/mvx-lang/mvx/releases",
+      "stable": {
+        "tag": "v0.2.2",
+        "version": "0.2.2",
+        "date": "2026-09-17",
+        "url": "https://github.com/mvx-lang/mvx/releases/tag/v0.2.2",
+        "assets": [
+          {
+            "name": "mvx-lang-0.2.2-linux-amd64.tar.gz",
+            "url": "https://github.com/mvx-lang/mvx/releases/download/v0.2.2/mvx-lang-0.2.2-linux-amd64.tar.gz",
+            "size": 26696170
+          },
+          {
+            "name": "mvx-lang-0.2.2-linux-arm64.tar.gz",
+            "url": "https://github.com/mvx-lang/mvx/releases/download/v0.2.2/mvx-lang-0.2.2-linux-arm64.tar.gz",
+            "size": 22024856
+          }
+        ]
+      },
+      "preview": null
+    }
+  ]
+}

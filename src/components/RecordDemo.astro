@@ -1,0 +1,178 @@
+---
+// One ORDERS record, three ways: as MultiValue stores it, as the Postgres
+// mapping projects it, and as the JSON document a Mongo file holds.  The
+// example is the one in the wiki's Files chapter.  Hovering or focusing a
+// value lights up the same value in the other two views.
+const V = (k: string, t: string) => ({ k, t });
+const items = [
+  { p: V('p1', 'Widget'), q: V('q1', '2'), pr: V('r1', '999'), prx: V('r1', '9.99') },
+  { p: V('p2', 'Gadget'), q: V('q2', '1'), pr: V('r2', '450'), prx: V('r2', '4.50') },
+];
+---
+<figure class="demo" aria-labelledby="demo-cap">
+  <div class="raw" aria-label="The record as one string">
+    <span class="raw-id">10042</span>
+    <code><span data-k="c" tabindex="0">Acme Corp</span><b>þ</b><span data-k="p1" tabindex="0">Widget</span><i>ý</i><span data-k="p2" tabindex="0">Gadget</span><b>þ</b><span data-k="q1" tabindex="0">2</span><i>ý</i><span data-k="q2" tabindex="0">1</span><b>þ</b><span data-k="r1" tabindex="0">999</span><i>ý</i><span data-k="r2" tabindex="0">450</span></code>
+  </div>
+
+  <div class="views">
+    <section class="view v-acct">
+      <h3>In the account</h3>
+      <p class="how">One record. <b class="m">þ</b> separates attributes, <i class="m">ý</i> separates values.</p>
+      <pre class="ed" aria-label="ORDERS 10042, one attribute per line"><span class="ln">001</span> <span data-k="c">Acme Corp</span>
+<span class="ln">002</span> <span data-k="p1">Widget</span><i>ý</i><span data-k="p2">Gadget</span>
+<span class="ln">003</span> <span data-k="q1">2</span><i>ý</i><span data-k="q2">1</span>
+<span class="ln">004</span> <span data-k="r1">999</span><i>ý</i><span data-k="r2">450</span></pre>
+      <p class="note"><code>PRICE</code> is <code>MD2</code>, so 999 is $9.99.</p>
+    </section>
+
+    <section class="view v-pg">
+      <h3>On PostgreSQL</h3>
+      <p class="how">The record is a <code>jsonb</code> document. Mapping adds typed columns, and the line items go in a child table.</p>
+      <div class="tbl" role="region" aria-label="sales.ORDERS table" tabindex="0">
+        <table>
+          <caption>sales."ORDERS"</caption>
+          <thead><tr><th>id</th><th>doc</th><th>CUSTOMER</th></tr></thead>
+          <tbody><tr><td>\x3130303432</td><td class="dim">{'{"1": "Acme Corp", …}'}</td><td data-k="c">Acme Corp</td></tr></tbody>
+        </table>
+      </div>
+      <div class="tbl" role="region" aria-label="sales.ORDERS_ORDERITEMS table" tabindex="0">
+        <table>
+          <caption>sales."ORDERS_ORDERITEMS"</caption>
+          <thead><tr><th>id</th><th>seq</th><th>PRODUCT</th><th>QTY</th><th>PRICE</th></tr></thead>
+          <tbody>
+            {items.map((r, i) => (
+              <tr><td>\x3130303432</td><td>{i + 1}</td><td data-k={r.p.k}>{r.p.t}</td><td data-k={r.q.k}>{r.q.t}</td><td data-k={r.prx.k} class="num">{r.prx.t}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="note"><code>PRICE</code> is a real <code>numeric</code> column, so <code>sum("PRICE")</code> works.</p>
+    </section>
+
+    <section class="view v-mongo">
+      <h3>On MongoDB</h3>
+      <p class="how">One document. The mapped fields sit beside the record, and the line items become an array.</p>
+      <pre class="json" aria-label="The record as a MongoDB document">{'{'}
+  _id: Binary('MTAwNDI=', 0),
+  doc: {'{'} '1': '<span data-k="c">Acme Corp</span>', '2': [ … ], … {'}'},
+  CUSTOMER: '<span data-k="c">Acme Corp</span>',
+  ORDERITEMS: [
+    {'{'} PRODUCT: '<span data-k="p1">Widget</span>', QTY: '<span data-k="q1">2</span>', PRICE: <span data-k="r1">9.99</span> {'}'},
+    {'{'} PRODUCT: '<span data-k="p2">Gadget</span>', QTY: '<span data-k="q2">1</span>', PRICE: <span data-k="r2">4.50</span> {'}'}
+  ]
+{'}'}</pre>
+      <p class="note"><code>_id</code> is the record id <code>10042</code>, stored as bytes.</p>
+    </section>
+  </div>
+
+  <figcaption id="demo-cap">
+    The same record, three ways. Programs read and write it as a record; SQL and Mongo tools read the rows and the document.
+    The mapping comes from the dictionary you already have.
+  </figcaption>
+</figure>
+
+<script>
+  const root = document.querySelector('.demo');
+  if (root) {
+    const all = root.querySelectorAll<HTMLElement>('[data-k]');
+    const light = (k: string | null) => {
+      all.forEach((el) => el.classList.toggle('lit', k !== null && el.dataset.k === k));
+    };
+    all.forEach((el) => {
+      el.addEventListener('mouseenter', () => light(el.dataset.k ?? null));
+      el.addEventListener('focus', () => light(el.dataset.k ?? null));
+    });
+    root.addEventListener('mouseleave', () => light(null));
+    root.addEventListener('focusout', (e) => {
+      if (!root.contains(e.relatedTarget as Node)) light(null);
+    });
+  }
+</script>
+
+<style>
+  .demo { margin: 0; }
+
+  .raw {
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 1rem 1.25rem;
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+  .raw-id {
+    font: 600 0.8rem/1 var(--mono);
+    color: var(--accent-ink);
+    background: var(--accent);
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+  }
+  .raw code {
+    font-size: clamp(1rem, 2.4vw, 1.45rem);
+    background: none;
+    border: 0;
+    padding: 0;
+    white-space: nowrap;
+  }
+  .raw b, .raw i, .ed i, .how .m { color: var(--mark); font-style: normal; font-weight: 600; }
+  .raw b { font-size: 1.15em; }
+
+  .views {
+    display: grid;
+    gap: 2rem 2.5rem;
+    margin-top: 2rem;
+  }
+  @media (min-width: 60rem) {
+    .views {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-areas: 'acct pg' 'mongo pg';
+      align-items: start;
+    }
+    .v-acct { grid-area: acct; }
+    .v-pg { grid-area: pg; }
+    .v-mongo { grid-area: mongo; }
+  }
+  .view { min-width: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+  .view h3 { font-size: 1.1rem; }
+  .how { color: var(--ink-2); font-size: 0.95rem; }
+  .note { color: var(--ink-2); font-size: 0.85rem; }
+
+  .ed .ln { color: var(--ink-2); user-select: none; }
+
+  .tbl { overflow-x: auto; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font: 0.84rem/1.4 var(--mono);
+    font-variant-numeric: tabular-nums;
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+  }
+  caption {
+    text-align: left;
+    font: 600 0.8rem/1 var(--mono);
+    color: var(--ink-2);
+    padding: 0 0 0.35rem;
+  }
+  th, td { padding: 0.35rem 0.6rem; text-align: left; white-space: nowrap; }
+  th { color: var(--ink-2); font-weight: 600; border-bottom: 1px solid var(--rule); }
+  tbody tr:nth-child(even) td { background: var(--band); }
+  td.num { text-align: right; }
+  td.dim { color: var(--ink-2); }
+  .tbl + .tbl { margin-top: 0.5rem; }
+
+  [data-k] { border-radius: 3px; transition: background-color 120ms ease; cursor: default; }
+  [data-k].lit { background: var(--hi); box-shadow: 0 0 0 2px var(--hi); }
+  .raw [data-k]:focus-visible { outline-offset: 1px; }
+
+  figcaption {
+    margin-top: 1.25rem;
+    color: var(--ink-2);
+    font-size: 0.95rem;
+    max-width: var(--measure);
+  }
+</style>

@@ -1,0 +1,15 @@
+---
+import Base from '../layouts/Base.astro';
+---
+<Base title="Page not found: mvx" description="This page does not exist on mvx-lang.org.">
+  <section class="wrap nf">
+    <h1>No record with that id.</h1>
+    <p>The page you asked for isn't on this site. It may have moved to the documentation.</p>
+    <p><a href="/">Go to the home page</a> or <a href="https://github.com/mvx-lang/mvx/wiki">read the documentation</a>.</p>
+  </section>
+</Base>
+
+<style>
+  .nf { padding-block: clamp(4rem, 12vw, 9rem); }
+  .nf p { margin-top: 1rem; font-size: 1.1rem; }
+</style>
