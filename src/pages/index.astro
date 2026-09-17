@@ -159,6 +159,12 @@ db.ORDERS.aggregate([
         doubles, so arithmetic runs at the speed of C.
       </p>
       <p>
+        It is also designed for today's hardware. The classic MultiValue systems were built when
+        memory was measured in megabytes, and saved every byte. mvx trades some of today's gigabytes
+        for speed: it keeps an index into each dynamic array, so reading or writing any element takes
+        a few nanoseconds, however long the array is.
+      </p>
+      <p>
         The compiler also writes standard debug information mapped to your BASIC line numbers. gdb
         and lldb step through the program you wrote, and profilers such as perf and Instruments
         report time against your own source lines.

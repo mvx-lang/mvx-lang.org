@@ -127,6 +127,14 @@ const top = Math.max(...sieve.map((r) => r.banked));
         </div>
       </figure>
       <p>
+        Part of that speed is a choice the older systems could not make. They were designed when a
+        large machine had a few megabytes of memory, so every byte counted and a dynamic array was kept
+        as bare text and scanned to find an element, rather than indexed. mvx is written for today's machines,
+        where memory comes in gigabytes. It spends some of it on purpose: the index costs eight bytes
+        for each element it tracks, and in return reaching any element takes the same time however long
+        the array is.
+      </p>
+      <p>
         In September I measured everything again, and added OpenQM through ScarletDME, its open-source
         descendant, built with optimisation. It managed 46 passes on the flat sieve and 19 on the banked
         one. Most of that gap is the interpreter. The rest is how it stores values: OpenQM copies the
