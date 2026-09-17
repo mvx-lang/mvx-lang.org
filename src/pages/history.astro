@@ -10,12 +10,15 @@ const timeline = [
 ];
 
 const sieve = [
-  { name: 'mvx, after the fix', flat: '13,660', banked: 76 },
+  { name: 'mvx today', flat: '14,419', banked: 339 },
+  { name: 'UniData 8.3', flat: '68', banked: 35 },
   { name: 'UniVerse 14.2', flat: 'cannot run', banked: 35 },
-  { name: 'UniData 8.3', flat: '66', banked: 35 },
-  { name: 'mvx, before the fix', flat: '13,660', banked: 31 },
-  { name: 'jBASE 6.2.1', flat: '145', banked: 7 },
+  { name: 'OpenQM (ScarletDME)', flat: '46', banked: 19 },
+  { name: 'mvx after the first fix (Aug)', flat: '13,660', banked: 76 },
+  { name: 'mvx before the fix (Aug)', flat: '13,660', banked: 31 },
+  { name: 'jBASE 6.2.1 (Aug)', flat: '145', banked: 7 },
 ];
+const top = Math.max(...sieve.map((r) => r.banked));
 ---
 <Base
   title="History of mvx"
@@ -85,23 +88,6 @@ const sieve = [
         weakness in mvx.
       </p>
 
-      <figure class="sieve">
-        <figcaption>Banked sieve, passes in five seconds</figcaption>
-        <div class="tbl" role="region" aria-label="Banked sieve results" tabindex="0">
-          <table>
-            <thead><tr><th scope="col">System</th><th scope="col" class="num">Banked sieve</th><th scope="col" class="num">Flat sieve</th></tr></thead>
-            <tbody>
-              {sieve.map((r) => (
-                <tr>
-                  <th scope="row">{r.name}</th>
-                  <td class="num"><span class="cell"><span class="bar" aria-hidden="true"><span style={`--w:${(r.banked / 76) * 100}%`}></span></span><span>{r.banked}</span></span></td>
-                  <td class="num dim">{r.flat}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </figure>
 
       <p>
         Before the fix, the fastest system on the flat sieve came third of four. Banking cost UniData a factor of two
@@ -113,8 +99,44 @@ const sieve = [
         Three changes fixed it. A value reuses its own buffer when nothing else shares it. An element
         assignment patches the string in place. Long arrays get an index built on demand, so reaching
         element N no longer means scanning from the start. Writing an element went from 170 to 64
-        nanoseconds, and on long arrays the cost stopped growing with length. mvx now manages 76 passes
+        nanoseconds, and on long arrays the cost stopped growing with length. That took mvx to 76 passes
         on the banked sieve, ahead of both interpreters, and the flat result did not change.
+      </p>
+      <p>
+        The work carried on from there. The index now records every element boundary and covers short
+        arrays too, it survives when a shared string is copied, and integers are turned into text
+        without <code>printf</code>. Reading or writing an element now takes 5 to 8 nanoseconds at any
+        length and in any order. The banked sieve is at 339 passes, and the flat sieve matches C: 14,419
+        passes against 14,281.
+      </p>
+      <figure class="sieve">
+        <figcaption>Passes in five seconds. Measured September 2026 unless marked August.</figcaption>
+        <div class="tbl" role="region" aria-label="Banked sieve results" tabindex="0">
+          <table>
+            <thead><tr><th scope="col">System</th><th scope="col" class="num">Banked sieve</th><th scope="col" class="num">Flat sieve</th></tr></thead>
+            <tbody>
+              {sieve.map((r) => (
+                <tr>
+                  <th scope="row">{r.name}</th>
+                  <td class="num"><span class="cell"><span class="bar" aria-hidden="true"><span style={`--w:${Math.max((r.banked / top) * 100, 1)}%`}></span></span><span>{r.banked}</span></span></td>
+                  <td class="num dim">{r.flat}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </figure>
+      <p>
+        In September I measured everything again, and added OpenQM through ScarletDME, its open-source
+        descendant, built with optimisation. It managed 46 passes on the flat sieve and 19 on the banked
+        one. Most of that gap is the interpreter. The rest is how it stores values: OpenQM copies the
+        whole string on every element write, scans from the start of a field to reach each value, and
+        formats every number it stores with <code>sprintf</code>.
+      </p>
+      <p>
+        mvx is not far ahead everywhere. UniData already walks a list in order at a constant cost per
+        element, so for the usual loop over a list the difference is mostly compiled against
+        interpreted. UniVerse inserts and deletes within a factor of two of mvx.
       </p>
 
       <h2>Drivers instead of a database</h2>

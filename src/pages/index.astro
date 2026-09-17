@@ -10,12 +10,12 @@ const latest = mvx?.stable;
 const download = latest ? latest.url : `${REPO}/releases/latest`;
 
 // The flat 1M prime sieve over five seconds, as a share of a C sieve run on
-// the same machine.  Figures from "Git in the PICK world" (Aug 2026).
+// the same machine.  Measured September 2026, except jBASE (August 2026).
 const bench = [
-  { name: 'mvx', passes: 13660, c: 14221, note: 'LLVM, native code' },
+  { name: 'mvx', passes: 14419, c: 14281, note: 'LLVM, native code' },
   { name: 'jBASE 6.2.1 with -O4', passes: 216, c: 13708, note: 'compiled through C' },
-  { name: 'jBASE 6.2.1', passes: 145, c: 13708, note: 'compiled through C' },
-  { name: 'UniData 8.3', passes: 66, c: 13967, note: 'interpreted' },
+  { name: 'UniData 8.3', passes: 68, c: 14247, note: 'interpreted' },
+  { name: 'OpenQM (ScarletDME)', passes: 46, c: 14152, note: 'interpreted' },
 ].map((b) => ({ ...b, pct: (b.passes / b.c) * 100 }));
 
 const drivers = [
@@ -173,13 +173,14 @@ db.ORDERS.aggregate([
         {bench.map((b) => (
           <li>
             <span class="b-name">{b.name} <span class="b-note">{b.note}</span></span>
-            <span class="b-bar" aria-hidden="true"><span style={`--w:${Math.max(b.pct, 0.6).toFixed(2)}%`}></span></span>
+            <span class="b-bar" aria-hidden="true"><span style={`--w:${Math.min(Math.max(b.pct, 0.6), 100).toFixed(2)}%`}></span></span>
             <span class="b-val">{b.pct < 10 ? b.pct.toFixed(1) : Math.round(b.pct)}% of C</span>
           </li>
         ))}
       </ul>
       <p class="b-src">
-        Each system is measured against C on its own machine. <a href="/history/#speed">How these were measured</a>.
+        Each system is measured against C on its own machine, in September 2026 (jBASE in August).
+        <a href="/history/#speed">How these were measured</a>.
       </p>
     </figure>
   </section>
