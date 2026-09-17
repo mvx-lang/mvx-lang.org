@@ -12,7 +12,7 @@ const download = latest ? latest.url : `${REPO}/releases/latest`;
 // The flat 1M prime sieve over five seconds, as a share of a C sieve run on
 // the same machine.  Measured September 2026, except jBASE (August 2026).
 const bench = [
-  { name: 'mvx', passes: 14419, c: 14281, note: 'LLVM, native code' },
+  { name: 'mvx', passes: 14011, c: 14387, note: 'LLVM, native code' },
   { name: 'jBASE 6.2.1 with -O4', passes: 216, c: 13708, note: 'compiled through C' },
   { name: 'UniData 8.3', passes: 68, c: 14247, note: 'interpreted' },
   { name: 'OpenQM (ScarletDME)', passes: 46, c: 14152, note: 'interpreted' },
@@ -156,7 +156,7 @@ db.ORDERS.aggregate([
       <p>
         mvx compiles BASIC straight to machine code through LLVM, the compiler toolkit behind clang
         and Swift. It does not translate to C first. Numeric variables become real integers and
-        doubles, so arithmetic runs at the speed of C.
+        doubles, so arithmetic runs close to the speed of C.
       </p>
       <p>
         It is also designed for today's hardware. The classic MultiValue systems were built when

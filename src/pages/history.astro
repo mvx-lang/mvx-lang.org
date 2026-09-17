@@ -10,7 +10,7 @@ const timeline = [
 ];
 
 const sieve = [
-  { name: 'mvx today', flat: '14,419', banked: 339 },
+  { name: 'mvx today', flat: '14,011', banked: 339 },
   { name: 'UniData 8.3', flat: '68', banked: 35 },
   { name: 'UniVerse 14.2', flat: 'cannot run', banked: 35 },
   { name: 'OpenQM (ScarletDME)', flat: '46', banked: 19 },
@@ -106,8 +106,8 @@ const top = Math.max(...sieve.map((r) => r.banked));
         The work carried on from there. The index now records every element boundary and covers short
         arrays too, it survives when a shared string is copied, and integers are turned into text
         without <code>printf</code>. Reading or writing an element now takes 5 to 8 nanoseconds at any
-        length and in any order. The banked sieve is at 339 passes, and the flat sieve matches C: 14,419
-        passes against 14,281.
+        length and in any order. The banked sieve is at 339 passes, and the flat sieve runs at about 97% of
+        C: 14,011 passes against 14,387, best of eight interleaved runs.
       </p>
       <figure class="sieve">
         <figcaption>Passes in five seconds. Measured September 2026 unless marked August.</figcaption>
