@@ -8,18 +8,15 @@ const fmt = (d: string) =>
   d ? new Date(`${d}T00:00:00Z`).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
 const mb = (n: number) => `${(n / 1048576).toFixed(0)} MB`;
 const arch = (name: string) => (/arm64|aarch64/.test(name) ? 'Linux ARM64' : /amd64|x86_64/.test(name) ? 'Linux x86-64' : name);
-const checked = new Date(data.generated).toLocaleDateString('en-AU', {
-  day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Australia/Melbourne',
-});
 ---
-<div class="rel">
+<div class="rel" data-rel data-repo={mvx.repo}>
   {stable ? (
     <div class="card">
       <div class="head">
-        <p class="ver"><a href={stable.url}>mvx {stable.version}</a></p>
-        <p class="date">Released {fmt(stable.date)}</p>
+        <p class="ver"><a href={stable.url} data-rel-url>mvx <span data-rel-version>{stable.version}</span></a></p>
+        <p class="date">Released <span data-rel-date>{fmt(stable.date)}</span></p>
       </div>
-      <ul class="dl">
+      <ul class="dl" data-rel-downloads>
         {stable.assets.map((a) => (
           <li>
             <a class="btn btn-plain" href={a.url}>Download for {arch(a.name)}</a>
@@ -28,20 +25,127 @@ const checked = new Date(data.generated).toLocaleDateString('en-AU', {
         ))}
       </ul>
       <p class="links">
-        <a href={stable.url}>Release notes</a>
+        <a href={stable.url} data-rel-url>Release notes</a>
         <a href={mvx.url}>All releases</a>
       </p>
     </div>
   ) : (
     <p>No release has been published yet. <a href={mvx.url}>Check GitHub for builds</a>.</p>
   )}
-  {preview && (
-    <p class="preview">
-      A preview, <a href={preview.url}>mvx {preview.version}</a>, is also available ({fmt(preview.date)}).
-    </p>
-  )}
-  <p class="checked">Checked against GitHub on {checked}. This page is rebuilt when a new release is published.</p>
+  <p class="preview" data-rel-preview hidden={!preview}>
+    {preview && (
+      <Fragment>
+        A preview, <a href={preview.url}>mvx {preview.version}</a>, is also available ({fmt(preview.date)}).
+      </Fragment>
+    )}
+  </p>
+  <p class="checked" data-rel-note>Read from GitHub when this page loads.</p>
 </div>
+
+<script>
+  // THE PAGE ASKS GITHUB ITSELF.  What is rendered above is the snapshot taken
+  // when the site was built; it is the fallback, not the source.  So a release
+  // published five minutes ago shows here without anything being rebuilt or
+  // deployed -- and a reader with no JavaScript, or GitHub being unreachable,
+  // still sees a real (if older) release rather than an error.
+  import { pick } from '../lib/releases.js';
+
+  const root = document.querySelector<HTMLElement>('[data-rel]');
+  const CACHE_KEY = 'mvx-releases-v1';
+  const CACHE_MS = 15 * 60 * 1000;   // GitHub allows 60 anonymous calls an hour
+
+  const fmtDate = (d: string) =>
+    d ? new Date(`${d}T00:00:00Z`).toLocaleDateString('en-AU',
+        { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+  const mb = (n: number) => `${Math.round(n / 1048576)} MB`;
+  const archOf = (name: string) =>
+    /arm64|aarch64/.test(name) ? 'Linux ARM64'
+    : /amd64|x86_64/.test(name) ? 'Linux x86-64' : name;
+
+  async function load(repo: string) {
+    try {
+      const hit = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+      if (hit && Date.now() - hit.at < CACHE_MS) return hit.data;
+    } catch { /* private window, cleared storage: just ask */ }
+    const res = await fetch(`https://api.github.com/repos/${repo}/releases?per_page=30`, {
+      headers: { Accept: 'application/vnd.github+json' },
+    });
+    if (!res.ok) throw new Error(`GitHub answered ${res.status}`);
+    const data = pick(await res.json());
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data }));
+    } catch { /* nothing to do about a full or blocked store */ }
+    return data;
+  }
+
+  function render(data: any) {
+    const { stable, preview } = data;
+    if (!stable || !root) return;
+
+    root.querySelectorAll<HTMLElement>('[data-rel-version]').forEach((el) => {
+      el.textContent = stable.version;
+    });
+    root.querySelectorAll<HTMLAnchorElement>('[data-rel-url]').forEach((el) => {
+      el.href = stable.url;
+    });
+    const date = root.querySelector<HTMLElement>('[data-rel-date]');
+    if (date) date.textContent = fmtDate(stable.date);
+
+    const dl = root.querySelector<HTMLElement>('[data-rel-downloads]');
+    if (dl && stable.assets.length) {
+      dl.replaceChildren(...stable.assets.map((a: any) => {
+        const li = document.createElement('li');
+        const link = document.createElement('a');
+        link.className = 'btn btn-plain';
+        link.href = a.url;
+        link.textContent = `Download for ${archOf(a.name)}`;
+        const size = document.createElement('span');
+        size.className = 'size';
+        size.textContent = `${a.name}, ${mb(a.size)}`;
+        li.append(link, size);
+        return li;
+      }));
+    }
+
+    const prev = root.querySelector<HTMLElement>('[data-rel-preview]');
+    if (prev) {
+      if (preview) {
+        prev.replaceChildren(
+          document.createTextNode('A preview, '),
+          Object.assign(document.createElement('a'),
+            { href: preview.url, textContent: `mvx ${preview.version}` }),
+          document.createTextNode(`, is also available (${fmtDate(preview.date)}).`),
+        );
+        prev.hidden = false;
+      } else {
+        prev.hidden = true;
+      }
+    }
+
+    // Elsewhere on the page: the hero's download button and the install lines.
+    document.querySelectorAll<HTMLElement>('[data-mvx-version]').forEach((el) => {
+      el.textContent = el.textContent!.replace(/\d+\.\d+\.\d+/, stable.version);
+      if (el instanceof HTMLAnchorElement) el.href = stable.url;
+    });
+  }
+
+  if (root) {
+    load(root.dataset.repo!)
+      .then((data) => {
+        render(data);
+        const note = root.querySelector<HTMLElement>('[data-rel-note]');
+        if (note) note.textContent = 'Read from GitHub when this page loads.';
+      })
+      .catch(() => {
+        // Leave the built-in snapshot showing, and say that is what it is.
+        const note = root.querySelector<HTMLElement>('[data-rel-note]');
+        if (note) {
+          note.textContent =
+            'GitHub could not be reached, so this is the release known when the page was built.';
+        }
+      });
+  }
+</script>
 
 <style>
   .card {

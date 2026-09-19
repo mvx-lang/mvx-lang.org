@@ -1,13 +1,17 @@
 name: Rebuild on a new release
 
-# The page lists the latest mvx release, baked in at build time.  Compare what
-# the live site serves at /releases.json with GitHub, and rebuild when they
-# differ.  A token-triggered workflow_dispatch is allowed to start another
-# workflow, so no personal token is needed.
+# The PAGE reads GitHub itself, so a new release shows without any of this.
+# What is baked into the page is the fallback -- what a reader with no
+# JavaScript sees, and what shows when GitHub cannot be reached -- so it is
+# still worth keeping close to the truth.  Daily is enough for a fallback;
+# it was hourly when the page depended on it.
+#
+# A token-triggered workflow_dispatch may start another workflow, so no
+# personal token is needed.
 
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '17 6 * * *'
   workflow_dispatch:
 
 permissions:

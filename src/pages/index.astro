@@ -51,7 +51,7 @@ const docs = [
       MongoDB or a local store, whichever your team already runs.
     </p>
     <div class="actions">
-      <a class="btn btn-primary" href={download}>Download mvx {latest?.version}</a>
+      <a class="btn btn-primary" href={download} data-mvx-version>Download mvx {latest?.version}</a>
       <a class="btn btn-plain" href={WIKI}>Read the documentation</a>
       <a class="btn btn-plain" href={REPO}>View the source</a>
     </div>
@@ -241,7 +241,7 @@ db.ORDERS.aggregate([
       version of each you want. Other packages are on <a href={PACKAGES}>packages.mvx-lang.org</a>.
     </p>
     <Releases />
-    <pre class="install"><code>tar xzf mvx-lang-{latest?.version}-linux-amd64.tar.gz     # or -arm64
+    <pre class="install"><code><span data-mvx-version>tar xzf mvx-lang-{latest?.version}-linux-amd64.tar.gz</span>     # or -arm64
 ./mvx-lang/bin/mvx -a myaccount</code></pre>
   </section>
 

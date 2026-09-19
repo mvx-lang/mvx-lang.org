@@ -15,6 +15,9 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 
+// The same rules the page itself applies when it asks GitHub (src/lib/releases.js).
+import { pick } from '../src/lib/releases.js';
+
 export const PROJECTS = [
   {
     id: 'mvx',
@@ -26,44 +29,6 @@ export const PROJECTS = [
 
 const OUT_SRC = new URL('../src/data/releases.json', import.meta.url);
 const OUT_PUBLIC = new URL('../public/releases.json', import.meta.url);
-
-// "v0.2.2" -> [0,2,2], "2.1.0-rc3" -> [2,1,0] with pre "rc3"
-function parse(tag) {
-  const m = /^v?(\d+(?:\.\d+)*)(?:-(.+))?$/.exec(tag);
-  if (!m) return null;
-  return { nums: m[1].split('.').map(Number), pre: m[2] ?? null };
-}
-
-function cmpNums(a, b) {
-  for (let i = 0; i < Math.max(a.length, b.length); i++) {
-    const d = (a[i] ?? 0) - (b[i] ?? 0);
-    if (d) return d;
-  }
-  return 0;
-}
-
-// newest first; a release outranks its own pre-releases
-function cmpTags(a, b) {
-  const pa = parse(a), pb = parse(b);
-  const n = cmpNums(pb.nums, pa.nums);
-  if (n) return n;
-  if (!pa.pre && pb.pre) return -1;
-  if (pa.pre && !pb.pre) return 1;
-  return (pb.pre ?? '').localeCompare(pa.pre ?? '', undefined, { numeric: true });
-}
-
-function shape(r) {
-  return {
-    tag: r.tag_name,
-    version: r.tag_name.replace(/^v/, ''),
-    date: (r.published_at ?? r.created_at ?? '').slice(0, 10),
-    url: r.html_url,
-    // the downloadable builds, not their checksums
-    assets: (r.assets ?? [])
-      .filter((a) => a.name.endsWith('.tar.gz'))
-      .map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size })),
-  };
-}
 
 async function releasesOf(repo) {
   const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'mvx-lang.org-build' };
@@ -77,19 +42,8 @@ async function releasesOf(repo) {
 async function build() {
   const packages = [];
   for (const p of PROJECTS) {
-    const all = (await releasesOf(p.repo))
-      .filter((r) => !r.draft && r.tag_name !== 'dev' && parse(r.tag_name));
-    const stable = all.filter((r) => !r.prerelease && !parse(r.tag_name).pre)
-      .sort((a, b) => cmpTags(a.tag_name, b.tag_name))[0] ?? null;
-    const preview = all.filter((r) => r.prerelease || parse(r.tag_name).pre)
-      .filter((r) => !stable || cmpNums(parse(r.tag_name).nums, parse(stable.tag_name).nums) > 0)
-      .sort((a, b) => cmpTags(a.tag_name, b.tag_name))[0] ?? null;
-    packages.push({
-      ...p,
-      url: `https://github.com/${p.repo}/releases`,
-      stable: stable && shape(stable),
-      preview: preview && shape(preview),
-    });
+    const { stable, preview } = pick(await releasesOf(p.repo));
+    packages.push({ ...p, url: `https://github.com/${p.repo}/releases`, stable, preview });
   }
   return { generated: new Date().toISOString(), packages };
 }
@@ -120,4 +74,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   await main();
 }
 
-export { build, cmpTags };
+export { build };
