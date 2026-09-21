@@ -33,7 +33,7 @@ const items = [
         <table>
           <caption>sales."ORDERS"</caption>
           <thead><tr><th>id</th><th>doc</th><th>CUSTOMER</th></tr></thead>
-          <tbody><tr><td>\x3130303432</td><td class="dim">{'{"1": "Acme Corp", …}'}</td><td data-k="c">Acme Corp</td></tr></tbody>
+          <tbody><tr><td>10042</td><td class="dim">{'{"1": "Acme Corp", …}'}</td><td data-k="c">Acme Corp</td></tr></tbody>
         </table>
       </div>
       <div class="tbl" role="region" aria-label="sales.ORDERS_ORDERITEMS table" tabindex="0">
@@ -42,7 +42,7 @@ const items = [
           <thead><tr><th>id</th><th>seq</th><th>PRODUCT</th><th>QTY</th><th>PRICE</th></tr></thead>
           <tbody>
             {items.map((r, i) => (
-              <tr><td>\x3130303432</td><td>{i + 1}</td><td data-k={r.p.k}>{r.p.t}</td><td data-k={r.q.k}>{r.q.t}</td><td data-k={r.prx.k} class="num">{r.prx.t}</td></tr>
+              <tr><td>10042</td><td>{i + 1}</td><td data-k={r.p.k}>{r.p.t}</td><td data-k={r.q.k}>{r.q.t}</td><td data-k={r.prx.k} class="num">{r.prx.t}</td></tr>
             ))}
           </tbody>
         </table>
@@ -54,7 +54,7 @@ const items = [
       <h3>On MongoDB</h3>
       <p class="how">One document. The mapped fields sit beside the record, and the line items become an array.</p>
       <pre class="json" aria-label="The record as a MongoDB document">{'{'}
-  _id: Binary('MTAwNDI=', 0),
+  _id: '10042',
   doc: {'{'} '1': '<span data-k="c">Acme Corp</span>', '2': [ … ], … {'}'},
   CUSTOMER: '<span data-k="c">Acme Corp</span>',
   ORDERITEMS: [
@@ -62,7 +62,7 @@ const items = [
     {'{'} PRODUCT: '<span data-k="p2">Gadget</span>', QTY: '<span data-k="q2">1</span>', PRICE: <span data-k="r2">4.50</span> {'}'}
   ]
 {'}'}</pre>
-      <p class="note"><code>_id</code> is the record id <code>10042</code>, stored as bytes.</p>
+      <p class="note"><code>_id</code> is the record id itself — only a byte the character set cannot carry is escaped.</p>
     </section>
   </div>
 
