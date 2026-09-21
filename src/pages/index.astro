@@ -222,6 +222,50 @@ db.ORDERS.aggregate([
     </div>
   </section>
 
+  <section class="wrap split" aria-labelledby="msg-h">
+    <div class="intro">
+      <h2 id="msg-h">Message another port, without breaking their screen.</h2>
+      <p>
+        Sessions have a port again. <code>WHO</code> and <code>LISTU</code> answer from a real
+        registry, and <code>MSG</code> takes the classic forms &mdash; a port, a range, an account,
+        a user, or every port at once.
+      </p>
+      <p>
+        Nothing is pushed at a running program. A message waits until the program asks for it, so a
+        full-screen form keeps its shape; at the prompt it appears as it arrives and the line you
+        were typing comes back underneath it.
+      </p>
+      <p>
+        One small daemon carries it on a host. Point that at MQTT and the roster spans machines, so
+        ports in different containers can reach each other.
+      </p>
+    </div>
+    <div class="stack">
+      <figure>
+        <figcaption>At Jane's terminal, sending a record along with it</figcaption>
+        <pre><code>&gt; WHO
+3 jane SALES
+&gt; MSG !7 WITH ORDERS O1234 have a look at this
+sent to 1 port, with ORDERS O1234</code></pre>
+      </figure>
+      <figure>
+        <figcaption>At Fred's, half way through a command</figcaption>
+        <pre><code>sales&gt; LIST ORD
+[3] jane: have a look at this
+     attached: ORDERS O1234 &mdash; on the stack as "CT ORDERS O1234" (.1 to recall)
+sales&gt; LIST ORD</code></pre>
+      </figure>
+      <figure>
+        <figcaption>And from a program, where the ELSE is a port that is not logged on</figcaption>
+        <pre><code>SEND "Backup starting at 18:00" TO 7 THEN
+   PRINT "told them"
+END ELSE
+   PRINT "port 7 is not logged on"
+END</code></pre>
+      </figure>
+    </div>
+  </section>
+
   <section class="wrap" aria-labelledby="sys-h">
     <h2 id="sys-h">A complete MultiValue system.</h2>
     <dl class="system">

@@ -1,5 +1,5 @@
 {
-  "generated": "2026-09-21T00:33:25.917Z",
+  "generated": "2026-09-21T00:51:24.365Z",
   "packages": [
     {
       "id": "mvx",
@@ -8,20 +8,20 @@
       "summary": "The compiler, runtime and shell, for Linux on x86-64 and ARM64.",
       "url": "https://github.com/mvx-lang/mvx/releases",
       "stable": {
-        "tag": "v0.2.3",
-        "version": "0.2.3",
-        "date": "2026-09-18",
-        "url": "https://github.com/mvx-lang/mvx/releases/tag/v0.2.3",
+        "tag": "v0.3.0",
+        "version": "0.3.0",
+        "date": "2026-09-21",
+        "url": "https://github.com/mvx-lang/mvx/releases/tag/v0.3.0",
         "assets": [
           {
-            "name": "mvx-lang-0.2.3-linux-amd64.tar.gz",
-            "url": "https://github.com/mvx-lang/mvx/releases/download/v0.2.3/mvx-lang-0.2.3-linux-amd64.tar.gz",
-            "size": 26721823
+            "name": "mvx-lang-0.3.0-linux-amd64.tar.gz",
+            "url": "https://github.com/mvx-lang/mvx/releases/download/v0.3.0/mvx-lang-0.3.0-linux-amd64.tar.gz",
+            "size": 26775332
           },
           {
-            "name": "mvx-lang-0.2.3-linux-arm64.tar.gz",
-            "url": "https://github.com/mvx-lang/mvx/releases/download/v0.2.3/mvx-lang-0.2.3-linux-arm64.tar.gz",
-            "size": 22039444
+            "name": "mvx-lang-0.3.0-linux-arm64.tar.gz",
+            "url": "https://github.com/mvx-lang/mvx/releases/download/v0.3.0/mvx-lang-0.3.0-linux-arm64.tar.gz",
+            "size": 22100192
           }
         ]
       },
